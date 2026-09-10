@@ -26,7 +26,7 @@ export default function Overlay({ progress, ready }) {
   // Page 1 — hero dissolves as the camera starts its arc
   const heroOpacity = useTransform(progress, [0, 0.16], [1, 0])
   const heroY = useTransform(progress, [0, 0.25], [0, -120])
-  const heroBlur = useTransform(progress, [0, 0.16], ['blur(0px)', 'blur(14px)'])
+  const heroScale = useTransform(progress, [0, 0.25], [1, 0.94])
 
   // Page 2 — left-side copy holds through the side profile
   const craftOpacity = useTransform(progress, [0.3, 0.45, 0.62, 0.74], [0, 1, 1, 0])
@@ -43,7 +43,7 @@ export default function Overlay({ progress, ready }) {
     <div className="text-cream">
       {/* ───────────── Page 1 ───────────── */}
       <Section className="flex-col items-center justify-center text-center">
-        <motion.div style={{ opacity: heroOpacity, y: heroY, filter: heroBlur }} className="flex flex-col items-center">
+        <motion.div style={{ opacity: heroOpacity, y: heroY, scale: heroScale }} className="flex flex-col items-center">
           <motion.p
             initial={reduce ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -118,7 +118,7 @@ export default function Overlay({ progress, ready }) {
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-            className="group mt-10 inline-flex items-center gap-4 rounded-full border border-white/50 bg-white/20 px-9 py-5 font-sans text-xs font-medium tracking-[0.3em] text-cream uppercase shadow-[0_8px_40px_rgba(14,13,12,0.12)] backdrop-blur-xl backdrop-saturate-150 transition-colors duration-500 hover:bg-white/25 focus-visible:ring-2 focus-visible:ring-cream focus-visible:outline-none"
+            className="group mt-10 inline-flex items-center gap-4 rounded-full border border-white/50 bg-white/20 px-9 py-5 font-sans text-xs font-medium tracking-[0.3em] text-cream uppercase shadow-[0_8px_40px_rgba(14,13,12,0.12)] backdrop-blur-md transition-colors duration-500 hover:bg-white/25 focus-visible:ring-2 focus-visible:ring-cream focus-visible:outline-none"
           >
             Shop the Collection
             <span aria-hidden className="transition-transform duration-500 ease-out group-hover:translate-x-1.5">

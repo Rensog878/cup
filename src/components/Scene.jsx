@@ -23,15 +23,17 @@ const target = new THREE.Vector3()
 
 /**
  * @param {import('framer-motion').MotionValue<number>} progress
- *   Spring-smoothed scroll progress (0 → 1), shared with the HTML overlay.
+ *   Damped scroll progress (0 → 1), shared with the HTML overlay.
+ * @param {boolean} highQuality  Lowered by PerformanceMonitor on slow devices.
  */
-export default function Scene({ progress }) {
+export default function Scene({ progress, highQuality }) {
   const model = useRef()
   const dof = useRef()
   const parallax = useRef({ x: 0, y: 0 })
+  const warmupFrames = useRef(0)
 
   useFrame((state, delta) => {
-    const { camera, pointer, size } = state
+    const { camera, gl, pointer, size } = state
     const p = clamp(progress.get(), 0, 1)
 
     // Act I → II: orbit from zenith to side profile. Act II → III: dolly in.
@@ -67,7 +69,14 @@ export default function Scene({ progress }) {
       camera.updateProjectionMatrix()
     }
 
-    if (model.current) model.current.rotation.y = Math.PI * orbit
+    // The light and table never move, so the shadow map only needs redrawing when the cup turns
+    gl.shadowMap.autoUpdate = false
+    const rotation = Math.PI * orbit
+    if (model.current && (model.current.rotation.y !== rotation || warmupFrames.current < 3)) {
+      model.current.rotation.y = rotation
+      gl.shadowMap.needsUpdate = true
+      warmupFrames.current++
+    }
 
     // Focus pull: the look-at point stays sharp; depth of field narrows for the macro
     const effect = dof.current
@@ -96,37 +105,39 @@ export default function Scene({ progress }) {
         intensity={1.5}
         color="#ffe2bf"
         castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-5}
-        shadow-camera-right={5}
-        shadow-camera-top={5}
-        shadow-camera-bottom={-5}
+        shadow-mapSize={[1024, 1024]}
+        shadow-camera-left={-3.5}
+        shadow-camera-right={3.5}
+        shadow-camera-top={3.5}
+        shadow-camera-bottom={-3.5}
         shadow-camera-near={1}
-        shadow-camera-far={20}
+        shadow-camera-far={16}
         shadow-bias={-0.0001}
         shadow-normalBias={0.03}
-        shadow-radius={5}
+        shadow-radius={4}
       />
 
       <group ref={model}>
         <ModelBoundary fallback={<ProceduralCup />}>
           <CupAndSaucer />
         </ModelBoundary>
+
+        {/* Rotates with the cup, so the contact shadow is baked once instead of every frame */}
+        <ContactShadows
+          frames={1}
+          position={[0, 0.002, 0]}
+          scale={6}
+          resolution={512}
+          far={1.2}
+          blur={2}
+          opacity={0.55}
+          color="#1a120b"
+        />
       </group>
 
       <Table />
 
-      <ContactShadows
-        position={[0, 0.002, 0]}
-        scale={6}
-        resolution={1024}
-        far={1.2}
-        blur={2}
-        opacity={0.55}
-        color="#1a120b"
-      />
-
-      <Effects dofRef={dof} />
+      <Effects dofRef={dof} highQuality={highQuality} />
     </>
   )
 }

@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Scroll, ScrollControls, useScroll } from '@react-three/drei'
-import { motion, useMotionValue, useSpring } from 'framer-motion'
+import { PerformanceMonitor, Scroll, ScrollControls, useScroll } from '@react-three/drei'
+import { motion, useMotionValue } from 'framer-motion'
 import Scene from './components/Scene'
 import Overlay from './components/Overlay'
 import Loader from './components/Loader'
@@ -23,25 +23,29 @@ function Ready({ onReady }) {
 
 export default function App() {
   const [ready, setReady] = useState(false)
-  const rawProgress = useMotionValue(0)
-  // One spring drives both the 3D timeline and the DOM overlays, so they never drift apart
-  const progress = useSpring(rawProgress, { stiffness: 140, damping: 28, mass: 0.5, restDelta: 0.0001 })
+  // Drops effects and resolution once if the device can't hold its frame rate
+  const [highQuality, setHighQuality] = useState(true)
+  // ScrollControls' damping already smooths the offset; one shared value drives 3D and DOM.
+  // (A second spring on top would only add latency between the wheel and the camera.)
+  const progress = useMotionValue(0)
 
   return (
     <main className="fixed inset-0 bg-espresso">
       <Canvas
         shadows="percentage"
-        dpr={[1, 1.75]}
+        dpr={highQuality ? [1, 1.5] : 1}
         gl={{ antialias: false, powerPreference: 'high-performance' }}
         camera={{ position: [0, 7.6, 0.1], fov: 30, near: 0.01, far: 100 }}
       >
         {/* Shown only until the café HDRI background loads */}
         <color attach="background" args={['#15100c']} />
 
+        <PerformanceMonitor flipflops={2} onDecline={() => setHighQuality(false)} onFallback={() => setHighQuality(false)} />
+
         <ScrollControls pages={3} damping={0.2}>
-          <ScrollProgress value={rawProgress} />
+          <ScrollProgress value={progress} />
           <Suspense fallback={<Loader />}>
-            <Scene progress={progress} />
+            <Scene progress={progress} highQuality={highQuality} />
             <Ready onReady={setReady} />
           </Suspense>
           {/* Kept outside Suspense: Drei creates its DOM root on mount, so it must mount exactly once */}
